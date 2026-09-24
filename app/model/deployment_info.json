@@ -1,0 +1,9 @@
+{
+  "source_model": "Stage 4.3 combined (augmentation + fine-tuning)",
+  "input_shape": "[1, 224, 224, 3] NHWC, float32",
+  "preprocessing": "resize to 224x224, normalize with mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]",
+  "output_shape": "[1, 11] raw logits (apply softmax for probabilities, argmax for predicted class)",
+  "pytorch_accuracy_bcdd_test": 0.964,
+  "tflite_float32_accuracy_bcdd_test": 0.9640151515151515,
+  "num_classes": 11
+}

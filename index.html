@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CropGuard — Crop Disease Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf-dark:#1f3d2b;
+    --leaf-mid:#3c6e47;
+    --soil:#5b4230;
+    --wheat:#c99a3d;
+    --paper:#f3efe4;
+    --paper-2:#ece5d3;
+    --text:#211e18;
+    --text-soft:#5a5347;
+    --danger:#a5432f;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  body.lang-bn{font-family:'Noto Sans Bengali','IBM Plex Sans',system-ui,sans-serif;}
+  main{width:100%;max-width:460px;}
+
+  header{margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .brand{
+    display:flex;align-items:center;gap:10px;margin-bottom:6px;
+  }
+  .brand svg{flex-shrink:0;}
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:28px;
+    line-height:1.1;
+    margin:0;
+    color:var(--leaf-dark);
+    letter-spacing:-0.01em;
+  }
+  .tagline{
+    color:var(--text-soft);
+    font-size:14.5px;
+    margin:0;
+    line-height:1.5;
+    max-width:38ch;
+  }
+
+  .lang-toggle{
+    display:flex;
+    border:1px solid #ddd4bd;
+    border-radius:999px;
+    overflow:hidden;
+    flex-shrink:0;
+    background:#fffefb;
+  }
+  .lang-toggle button{
+    border:none;
+    background:transparent;
+    padding:6px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    font-family:inherit;
+    color:var(--text-soft);
+    cursor:pointer;
+  }
+  .lang-toggle button.active{
+    background:var(--leaf-dark);
+    color:var(--paper);
+  }
+
+  .chips-row{
+    display:flex;flex-wrap:wrap;gap:7px;margin:18px 0 24px;
+  }
+  .chip{
+    background:var(--paper-2);
+    border:1px solid #ddd4bd;
+    color:var(--leaf-dark);
+    font-size:13px;
+    padding:5px 12px;
+    border-radius:999px;
+    font-weight:500;
+  }
+
+  .panel{
+    background:#fffefb;
+    border:1px solid #e4dcc7;
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+  }
+
+  .drop{
+    border:1.5px dashed #c9bd9c;
+    border-radius:8px;
+    padding:28px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .drop:hover, .drop:focus-visible{
+    border-color:var(--leaf-mid);
+    background:#faf8f1;
+    outline:none;
+  }
+  .drop.has-image{padding:12px;}
+  .drop p{margin:10px 0 2px;font-size:14px;color:var(--text-soft);}
+  .drop .hint{font-size:12.5px;color:#8b8371;margin-top:2px;}
+
+  #preview{
+    display:none;
+    width:100%;
+    max-height:280px;
+    object-fit:cover;
+    border-radius:6px;
+  }
+
+  .btn-row{display:flex;gap:10px;margin-top:14px;}
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:8px;
+    padding:11px 14px;
+    font-size:14px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn-secondary{
+    background:var(--paper-2);
+    color:var(--leaf-dark);
+    border:1px solid #ddd4bd;
+  }
+  .btn-secondary:hover{background:#e5ddc6;}
+  .btn-primary{
+    background:var(--leaf-dark);
+    color:#f3efe4;
+    width:100%;
+    margin-top:16px;
+    padding:13px;
+    font-size:15px;
+  }
+  .btn-primary:hover{background:#254a34;}
+  .btn-primary:disabled{
+    background:#cbc3ae;
+    color:#8b8371;
+    cursor:not-allowed;
+  }
+  input[type=file]{display:none;}
+
+  .result{
+    display:none;
+  }
+  .result.show{display:block;}
+  .result-label{
+    font-size:12.5px;
+    color:var(--text-soft);
+    margin:0 0 4px;
+  }
+  .result-disease{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:24px;
+    color:var(--leaf-dark);
+    margin:0 0 14px;
+    line-height:1.25;
+  }
+  body.lang-bn .result-disease{font-family:'Noto Sans Bengali',serif;}
+  .result-disease.healthy{color:var(--leaf-mid);}
+  .confidence-track{
+    background:var(--paper-2);
+    border-radius:999px;
+    height:8px;
+    overflow:hidden;
+    margin-bottom:6px;
+  }
+  .confidence-fill{
+    height:100%;
+    background:var(--wheat);
+    border-radius:999px;
+    transition:width .4s ease;
+  }
+  .confidence-text{
+    font-size:13px;
+    color:var(--text-soft);
+    margin:0 0 16px;
+  }
+
+  details{margin-top:4px;}
+  summary{
+    font-size:13px;
+    color:var(--leaf-mid);
+    cursor:pointer;
+    user-select:none;
+    font-weight:500;
+  }
+  .prob-row{
+    display:flex;justify-content:space-between;
+    font-size:12.5px;
+    padding:5px 0;
+    border-bottom:1px solid #efe9d9;
+    color:var(--text-soft);
+  }
+  .prob-row:last-child{border-bottom:none;}
+  .prob-row .name{color:var(--text);}
+
+  .status{
+    font-size:13.5px;
+    color:var(--text-soft);
+    text-align:center;
+    margin-top:12px;
+    display:none;
+  }
+  .status.show{display:block;}
+  .status.error{color:var(--danger);}
+
+  footer{
+    text-align:center;
+    font-size:12px;
+    color:#8b8371;
+    margin-top:28px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn, .confidence-fill{transition:none;}
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <header>
+    <div>
+      <div class="brand">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <path d="M15 27C15 27 6 22 6 13C6 7 10 3 15 3C20 3 24 7 24 13C24 22 15 27 15 27Z" fill="#3c6e47"/>
+          <path d="M15 27V13" stroke="#1f3d2b" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <h1>CropGuard</h1>
+      </div>
+      <p class="tagline" data-i18n="tagline">Photograph a leaf and get an instant disease check.</p>
+    </div>
+    <div class="lang-toggle">
+      <button type="button" id="langEn" class="active">EN</button>
+      <button type="button" id="langBn">বাং</button>
+    </div>
+  </header>
+
+  <div class="chips-row" id="chips">
+    <span class="chip" data-i18n="loading">Loading…</span>
+  </div>
+
+  <div class="panel">
+    <div class="drop" id="drop" tabindex="0" role="button" data-i18n-aria="dropAria">
+      <img id="preview" alt="Selected leaf photo">
+      <div id="dropText">
+        <p data-i18n="dropTitle">Drop an image here, or use the buttons below</p>
+        <p class="hint" data-i18n="dropHint">JPG or PNG, a clear photo of one leaf</p>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="cameraBtn" type="button">📷 <span data-i18n="takePhoto">Take Photo</span></button>
+      <button class="btn btn-secondary" id="fileBtn" type="button">📁 <span data-i18n="chooseFile">Choose File</span></button>
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    <input type="file" id="fileInput" accept="image/*">
+
+    <button class="btn btn-primary" id="analyzeBtn" type="button" disabled data-i18n="analyze">Analyze Leaf</button>
+    <p class="status" id="status"></p>
+  </div>
+
+  <div class="panel result" id="resultPanel">
+    <p class="result-label" data-i18n="detected">Detected</p>
+    <p class="result-disease" id="resultDisease">—</p>
+    <div class="confidence-track"><div class="confidence-fill" id="confidenceFill" style="width:0%"></div></div>
+    <p class="confidence-text" id="confidenceText"></p>
+    <details>
+      <summary data-i18n="seeAll">See all probabilities</summary>
+      <div id="probList"></div>
+    </details>
+  </div>
+
+  <footer>@Niaj_Morshed 2026: CropGuard — Real-Time Crop Disease Detection</footer>
+</main>
+
+<script>
+const API_BASE = 'http://127.0.0.1:8000';
+
+const STRINGS = {
+  en: {
+    tagline: 'Photograph a leaf and get an instant disease check.',
+    loading: 'Loading…',
+    dropAria: 'Choose an image',
+    dropTitle: 'Drop an image here, or use the buttons below',
+    dropHint: 'JPG or PNG, a clear photo of one leaf',
+    takePhoto: 'Take Photo',
+    chooseFile: 'Choose File',
+    analyze: 'Analyze Leaf',
+    analyzing: 'Analyzing…',
+    detected: 'Detected',
+    seeAll: 'See all probabilities',
+    connError: "Couldn't reach the server. Check that the backend is running.",
+    confidence: 'Confidence',
+    healthySuffix: ' — Healthy',
+    serverUnreachable: 'Server not reachable',
+  },
+  bn: {
+    tagline: 'পাতার ছবি তুলে দিন, সাথে সাথে রোগ শনাক্ত করে দেবে।',
+    loading: 'লোড হচ্ছে…',
+    dropAria: 'ছবি নির্বাচন করুন',
+    dropTitle: 'এখানে ছবি দিন, অথবা নিচের বাটন থেকে বেছে নিন',
+    dropHint: 'JPG বা PNG, একটি পাতার স্পষ্ট ছবি',
+    takePhoto: 'ছবি তুলুন',
+    chooseFile: 'ফাইল বেছে নিন',
+    analyze: 'পাতা পরীক্ষা করুন',
+    analyzing: 'পরীক্ষা করা হচ্ছে…',
+    detected: 'শনাক্ত হয়েছে',
+    seeAll: 'সব সম্ভাবনা দেখুন',
+    connError: 'সার্ভারে সংযোগ করা যায়নি। ব্যাকএন্ড চালু আছে কিনা দেখুন।',
+    confidence: 'নিশ্চয়তা',
+    healthySuffix: ' — সুস্থ',
+    serverUnreachable: 'সার্ভার সংযোগ পাওয়া যায়নি',
+  }
+};
+
+let currentLang = 'en';
+let lastResultData = null; // re-render result strings when language switches
+
+function applyLanguage(lang){
+  currentLang = lang;
+  document.body.classList.toggle('lang-bn', lang === 'bn');
+  document.documentElement.lang = lang;
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langBn').classList.toggle('active', lang === 'bn');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if(STRINGS[lang][key] !== undefined) el.textContent = STRINGS[lang][key];
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    const key = el.getAttribute('data-i18n-aria');
+    if(STRINGS[lang][key] !== undefined) el.setAttribute('aria-label', STRINGS[lang][key]);
+  });
+
+  if(lastResultData) renderResult(lastResultData);
+  loadSupportedDiseases();
+}
+
+document.getElementById('langEn').addEventListener('click', () => applyLanguage('en'));
+document.getElementById('langBn').addEventListener('click', () => applyLanguage('bn'));
+
+const chipsEl = document.getElementById('chips');
+const dropEl = document.getElementById('drop');
+const dropTextEl = document.getElementById('dropText');
+const previewEl = document.getElementById('preview');
+const cameraBtn = document.getElementById('cameraBtn');
+const fileBtn = document.getElementById('fileBtn');
+const cameraInput = document.getElementById('cameraInput');
+const fileInput = document.getElementById('fileInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const statusEl = document.getElementById('status');
+const resultPanel = document.getElementById('resultPanel');
+const resultDisease = document.getElementById('resultDisease');
+const confidenceFill = document.getElementById('confidenceFill');
+const confidenceText = document.getElementById('confidenceText');
+const probList = document.getElementById('probList');
+
+let selectedFile = null;
+
+function humanizeLabel(raw, lang){
+  const parts = raw.split('___');
+  const cropRaw = parts[0].replace(/_/g, ' ').replace('(maize)', '').trim();
+  const diseaseRaw = (parts[1] || '').replace(/_/g, ' ').trim();
+
+  const cropNames = {
+    en: {Corn:'Corn', Potato:'Potato', Tomato:'Tomato'},
+    bn: {Corn:'ভুট্টা', Potato:'আলু', Tomato:'টমেটো'}
+  };
+  const diseaseNames = {
+    en: {healthy:'Healthy', 'Late blight':'Late blight', 'Early blight':'Early blight',
+         'Bacterial spot':'Bacterial spot', 'Common rust':'Common rust',
+         'Northern Leaf Blight':'Northern Leaf Blight',
+         'Cercospora leaf spot Gray leaf spot':'Cercospora / Gray leaf spot'},
+    bn: {healthy:'সুস্থ', 'Late blight':'লেট ব্লাইট', 'Early blight':'আর্লি ব্লাইট',
+         'Bacterial spot':'ব্যাকটেরিয়াল স্পট', 'Common rust':'কমন রাস্ট',
+         'Northern Leaf Blight':'নর্দার্ন লিফ ব্লাইট',
+         'Cercospora leaf spot Gray leaf spot':'সারকোস্পোরা / গ্রে লিফ স্পট'}
+  };
+
+  const crop = (cropNames[lang] && cropNames[lang][cropRaw]) || cropRaw;
+  const disease = (diseaseNames[lang] && diseaseNames[lang][diseaseRaw]) || diseaseRaw;
+
+  if(diseaseRaw.toLowerCase() === 'healthy'){
+    return `${crop}${STRINGS[lang].healthySuffix}`;
+  }
+  return `${crop} · ${disease}`;
+}
+
+async function loadSupportedDiseases(){
+  try{
+    const res = await fetch(`${API_BASE}/supported-diseases`);
+    const data = await res.json();
+    chipsEl.innerHTML = '';
+    const cropNames = {en:{Corn:'Corn',Potato:'Potato',Tomato:'Tomato'}, bn:{Corn:'ভুট্টা',Potato:'আলু',Tomato:'টমেটো'}};
+    const crops = [...new Set(data.classes.map(c => c.split('___')[0].replace(/_/g,' ').replace('(maize)','').trim()))];
+    crops.forEach(c => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = (cropNames[currentLang] && cropNames[currentLang][c]) || c;
+      chipsEl.appendChild(chip);
+    });
+  }catch(e){
+    chipsEl.innerHTML = `<span class="chip">${STRINGS[currentLang].serverUnreachable}</span>`;
+  }
+}
+
+function setPreview(file){
+  selectedFile = file;
+  const url = URL.createObjectURL(file);
+  previewEl.src = url;
+  previewEl.style.display = 'block';
+  dropTextEl.style.display = 'none';
+  dropEl.classList.add('has-image');
+  analyzeBtn.disabled = false;
+  resultPanel.classList.remove('show');
+  statusEl.classList.remove('show');
+  lastResultData = null;
+}
+
+cameraBtn.addEventListener('click', () => cameraInput.click());
+fileBtn.addEventListener('click', () => fileInput.click());
+dropEl.addEventListener('click', () => fileInput.click());
+dropEl.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+[cameraInput, fileInput].forEach(input => {
+  input.addEventListener('change', e => {
+    if(e.target.files && e.target.files[0]) setPreview(e.target.files[0]);
+  });
+});
+
+function renderResult(data){
+  const isHealthy = data.disease.toLowerCase().includes('healthy');
+  resultDisease.textContent = humanizeLabel(data.disease, currentLang);
+  resultDisease.className = 'result-disease' + (isHealthy ? ' healthy' : '');
+
+  const pct = Math.round(data.confidence * 100);
+  confidenceFill.style.width = pct + '%';
+  confidenceText.textContent = `${STRINGS[currentLang].confidence}: ${pct}%`;
+
+  probList.innerHTML = '';
+  const sorted = Object.entries(data.all_probabilities).sort((a,b) => b[1]-a[1]);
+  sorted.forEach(([name, p]) => {
+    const row = document.createElement('div');
+    row.className = 'prob-row';
+    row.innerHTML = `<span class="name">${humanizeLabel(name, currentLang)}</span><span>${Math.round(p*100)}%</span>`;
+    probList.appendChild(row);
+  });
+
+  resultPanel.classList.add('show');
+}
+
+analyzeBtn.addEventListener('click', async () => {
+  if(!selectedFile) return;
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = STRINGS[currentLang].analyzing;
+  statusEl.classList.remove('show', 'error');
+  resultPanel.classList.remove('show');
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+
+  try{
+    const res = await fetch(`${API_BASE}/predict`, { method: 'POST', body: formData });
+    if(!res.ok) throw new Error('server error');
+    const data = await res.json();
+    lastResultData = data;
+    renderResult(data);
+  }catch(err){
+    statusEl.textContent = STRINGS[currentLang].connError;
+    statusEl.classList.add('show', 'error');
+  }finally{
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = STRINGS[currentLang].analyze;
+  }
+});
+
+applyLanguage('en');
+</script>
+</body>
+</html>
