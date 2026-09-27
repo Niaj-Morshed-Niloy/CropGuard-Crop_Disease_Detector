@@ -18,11 +18,9 @@ app.add_middleware(
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# MODEL_PATH = os.path.join(BASE_DIR, "model", "model_float16.tflite")uvicorn app.main:app --reload
 MODEL_PATH = os.path.join(BASE_DIR, "model", "model_float32.tflite")
 LABELS_PATH = os.path.join(BASE_DIR, "model", "class_labels.json")
 
-# interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
 interpreter = Interpreter(model_path=MODEL_PATH)
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
@@ -30,6 +28,17 @@ output_details = interpreter.get_output_details()
 
 with open(LABELS_PATH) as f:
     class_names = json.load(f)
+
+GATE_MODEL_PATH = os.path.join(BASE_DIR, "model", "model_gate_float32.tflite")
+GATE_LABELS_PATH = os.path.join(BASE_DIR, "model", "gate_class_labels.json")
+
+gate_interpreter = Interpreter(model_path=GATE_MODEL_PATH)
+gate_interpreter.allocate_tensors()
+gate_input_details = gate_interpreter.get_input_details()
+gate_output_details = gate_interpreter.get_output_details()
+
+with open(GATE_LABELS_PATH) as f:
+    gate_class_names = json.load(f) 
 
 IMG_SIZE = 224
 MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -60,6 +69,24 @@ async def predict(file: UploadFile = File(...)):
     image_bytes = await file.read()
     input_tensor = preprocess_image(image_bytes)
 
+    # Stage A: Gate check — leaf naki not_leaf
+    gate_interpreter.set_tensor(gate_input_details[0]["index"], input_tensor)
+    gate_interpreter.invoke()
+    gate_output = gate_interpreter.get_tensor(gate_output_details[0]["index"])[0]
+    gate_probs = softmax(gate_output)
+    gate_predicted_idx = int(np.argmax(gate_probs))
+    gate_predicted_class = gate_class_names[gate_predicted_idx]
+    gate_confidence = float(gate_probs[gate_predicted_idx])
+
+    if gate_predicted_class == "not_leaf":
+        return {
+            "disease": None,
+            "confidence": round(gate_confidence, 4),
+            "message": "This doesn't look like a Corn, Potato, or Tomato leaf. Please take a clear photo of one of these crops.",
+            "all_probabilities": {},
+        }
+
+    # Stage B: leaf হলে, আসল diagnosis model চালাও (অপরিবর্তিত, ৯৬.৪০% accuracy)
     interpreter.set_tensor(input_details[0]["index"], input_tensor)
     interpreter.invoke()
     output = interpreter.get_tensor(output_details[0]["index"])[0]
@@ -72,6 +99,7 @@ async def predict(file: UploadFile = File(...)):
     return {
         "disease": predicted_class,
         "confidence": round(confidence, 4),
+        "message": None,
         "all_probabilities": {
             class_names[i]: round(float(p), 4) for i, p in enumerate(probabilities)
         },

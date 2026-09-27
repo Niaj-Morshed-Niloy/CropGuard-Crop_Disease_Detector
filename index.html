@@ -294,12 +294,11 @@
     </details>
   </div>
 
-  <footer>@Niaj_Morshed 2026: CropGuard — Real-Time Crop Disease Detection</footer>
+  <footer>CropGuard — Real-Time Crop Disease Detection, BITC Thesis Project</footer>
 </main>
 
 <script>
-//const API_BASE = 'http://127.0.0.1:8000';
-const API_BASE = 'https://cropguard-crop-disease-detector.onrender.com';
+const API_BASE = 'http://127.0.0.1:8000';
 
 const STRINGS = {
   en: {
@@ -488,8 +487,16 @@ analyzeBtn.addEventListener('click', async () => {
     const res = await fetch(`${API_BASE}/predict`, { method: 'POST', body: formData });
     if(!res.ok) throw new Error('server error');
     const data = await res.json();
-    lastResultData = data;
-    renderResult(data);
+
+    if(data.disease === null){
+      statusEl.textContent = data.message || STRINGS[currentLang].connError;
+      statusEl.classList.add('show');
+      resultPanel.classList.remove('show');
+      lastResultData = null;
+    } else {
+      lastResultData = data;
+      renderResult(data);
+    }
   }catch(err){
     statusEl.textContent = STRINGS[currentLang].connError;
     statusEl.classList.add('show', 'error');
