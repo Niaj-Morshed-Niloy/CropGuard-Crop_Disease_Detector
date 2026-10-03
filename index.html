@@ -260,6 +260,37 @@
         margin: 0 0 16px;
       }
 
+      .disease-info {
+        background: var(--paper-2);
+        border: 1px solid #ddd4bd;
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+      }
+      .disease-info.healthy-info {
+        background: #eaf3ec;
+        border-color: #c9e0cd;
+      }
+      .disease-info .info-row {
+        display: flex;
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 6px;
+      }
+      .disease-info .info-row:last-child {
+        margin-bottom: 0;
+      }
+      .disease-info .info-label {
+        font-weight: 600;
+        color: var(--leaf-dark);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+      .disease-info .info-text {
+        color: var(--text);
+      }
+
       details {
         margin-top: 4px;
       }
@@ -406,15 +437,14 @@
           ></div>
         </div>
         <p class="confidence-text" id="confidenceText"></p>
+        <div id="diseaseInfo" class="disease-info"></div>
         <details>
           <summary data-i18n="seeAll">See all probabilities</summary>
           <div id="probList"></div>
         </details>
       </div>
 
-      <footer>
-        CropGuard — Real-Time Crop Disease Detection, BITC Thesis Project
-      </footer>
+      <footer>CropGuard — Real-Time Crop Disease Detection</footer>
     </main>
 
     <script>
@@ -457,6 +487,135 @@
           healthySuffix: " — সুস্থ",
           serverUnreachable: "সার্ভার সংযোগ পাওয়া যায়নি",
         },
+      };
+
+      const DISEASE_INFO = {
+        "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {
+          en: {
+            symptom:
+              "Rectangular gray-brown spots that run along the leaf veins.",
+            tip: "Remove and destroy infected leaves. Avoid overhead watering and rotate crops yearly.",
+          },
+          bn: {
+            symptom: "পাতার শিরা বরাবর লম্বাটে ধূসর-বাদামি দাগ।",
+            tip: "আক্রান্ত পাতা তুলে ফেলে দিন। উপর থেকে পানি দেওয়া এড়িয়ে চলুন, প্রতি বছর ফসল পরিবর্তন করুন।",
+          },
+        },
+        "Corn_(maize)___Common_rust_": {
+          en: {
+            symptom:
+              "Small reddish-brown raised blisters (pustules) scattered on both leaf sides.",
+            tip: "Plant rust-resistant varieties next season. Remove heavily infected leaves early.",
+          },
+          bn: {
+            symptom: "পাতার দুই পাশে ছোট ছোট লালচে-বাদামি ফোস্কার মতো দাগ।",
+            tip: "পরের মৌসুমে রোগ-প্রতিরোধী জাত লাগান। বেশি আক্রান্ত পাতা আগেই সরিয়ে ফেলুন।",
+          },
+        },
+        "Corn_(maize)___Northern_Leaf_Blight": {
+          en: {
+            symptom: "Long, cigar-shaped gray-green lesions on the leaves.",
+            tip: "Clear old crop debris after harvest. Space plants well for better airflow.",
+          },
+          bn: {
+            symptom: "পাতায় লম্বাটে, সিগারের মতো ধূসর-সবুজ দাগ।",
+            tip: "ফসল কাটার পর পুরনো গাছের অবশিষ্টাংশ পরিষ্কার করুন। গাছের মাঝে পর্যাপ্ত জায়গা রাখুন।",
+          },
+        },
+        "Corn_(maize)___healthy": {
+          en: {
+            symptom: "No visible disease symptoms — the leaf looks healthy.",
+            tip: "Keep monitoring regularly and maintain normal watering and fertilizing.",
+          },
+          bn: {
+            symptom: "কোনো রোগের লক্ষণ নেই — পাতা সুস্থ দেখাচ্ছে।",
+            tip: "নিয়মিত পর্যবেক্ষণ চালিয়ে যান, স্বাভাবিক পানি ও সার দেওয়া বজায় রাখুন।",
+          },
+        },
+        Potato___Early_blight: {
+          en: {
+            symptom:
+              "Dark brown spots with a target-like ring pattern, usually on older leaves.",
+            tip: "Remove infected lower leaves. Avoid wetting leaves when watering.",
+          },
+          bn: {
+            symptom:
+              "গাঢ় বাদামি দাগ, রিং-এর মতো প্যাটার্ন, সাধারণত পুরনো পাতায়।",
+            tip: "আক্রান্ত নিচের পাতা সরিয়ে ফেলুন। পানি দেওয়ার সময় পাতা ভেজানো এড়িয়ে চলুন।",
+          },
+        },
+        Potato___Late_blight: {
+          en: {
+            symptom:
+              "Water-soaked dark green to black patches that spread fast, especially in humid weather.",
+            tip: "Act quickly — remove and destroy infected plants to stop it spreading to others.",
+          },
+          bn: {
+            symptom:
+              "পানি-ভেজা কালচে-সবুজ দাগ, দ্রুত ছড়ায়, বিশেষত আর্দ্র আবহাওয়ায়।",
+            tip: "দ্রুত ব্যবস্থা নিন — আক্রান্ত গাছ তুলে ফেলুন যাতে অন্য গাছে না ছড়ায়।",
+          },
+        },
+        Potato___healthy: {
+          en: {
+            symptom: "No visible disease symptoms — the leaf looks healthy.",
+            tip: "Keep monitoring regularly and maintain normal watering and fertilizing.",
+          },
+          bn: {
+            symptom: "কোনো রোগের লক্ষণ নেই — পাতা সুস্থ দেখাচ্ছে।",
+            tip: "নিয়মিত পর্যবেক্ষণ চালিয়ে যান, স্বাভাবিক পানি ও সার দেওয়া বজায় রাখুন।",
+          },
+        },
+        Tomato___Bacterial_spot: {
+          en: {
+            symptom:
+              "Small, dark, angular spots, sometimes with a yellow ring around them.",
+            tip: "Avoid working in the field when leaves are wet. Remove infected leaves promptly.",
+          },
+          bn: {
+            symptom: "ছোট, গাঢ়, কোণাকার দাগ, কখনো চারপাশে হলুদ বলয় থাকে।",
+            tip: "পাতা ভেজা অবস্থায় ক্ষেতে কাজ করা এড়িয়ে চলুন। আক্রান্ত পাতা দ্রুত সরিয়ে ফেলুন।",
+          },
+        },
+        Tomato___Early_blight: {
+          en: {
+            symptom:
+              "Dark brown spots with a target-like ring pattern, usually starting on older leaves.",
+            tip: "Remove infected lower leaves. Mulch the soil to reduce splashing onto leaves.",
+          },
+          bn: {
+            symptom:
+              "গাঢ় বাদামি দাগ, রিং-এর মতো প্যাটার্ন, সাধারণত পুরনো পাতা থেকে শুরু হয়।",
+            tip: "আক্রান্ত নিচের পাতা সরিয়ে ফেলুন। মাটিতে মালচ দিন যাতে পানি ছিটে পাতায় না লাগে।",
+          },
+        },
+        Tomato___Late_blight: {
+          en: {
+            symptom:
+              "Water-soaked dark green to black patches that spread fast, especially in humid weather.",
+            tip: "Act quickly — remove and destroy infected plants to stop it spreading to others.",
+          },
+          bn: {
+            symptom:
+              "পানি-ভেজা কালচে-সবুজ দাগ, দ্রুত ছড়ায়, বিশেষত আর্দ্র আবহাওয়ায়।",
+            tip: "দ্রুত ব্যবস্থা নিন — আক্রান্ত গাছ তুলে ফেলুন যাতে অন্য গাছে না ছড়ায়।",
+          },
+        },
+        Tomato___healthy: {
+          en: {
+            symptom: "No visible disease symptoms — the leaf looks healthy.",
+            tip: "Keep monitoring regularly and maintain normal watering and fertilizing.",
+          },
+          bn: {
+            symptom: "কোনো রোগের লক্ষণ নেই — পাতা সুস্থ দেখাচ্ছে।",
+            tip: "নিয়মিত পর্যবেক্ষণ চালিয়ে যান, স্বাভাবিক পানি ও সার দেওয়া বজায় রাখুন।",
+          },
+        },
+      };
+
+      const INFO_LABELS = {
+        en: { symptom: "What it looks like", tip: "What to do" },
+        bn: { symptom: "লক্ষণ", tip: "করণীয়" },
       };
 
       let currentLang = "en";
@@ -626,6 +785,21 @@
         const pct = Math.round(data.confidence * 100);
         confidenceFill.style.width = pct + "%";
         confidenceText.textContent = `${STRINGS[currentLang].confidence}: ${pct}%`;
+
+        const infoEl = document.getElementById("diseaseInfo");
+        const info = DISEASE_INFO[data.disease];
+        if (info) {
+          const langInfo = info[currentLang];
+          const labels = INFO_LABELS[currentLang];
+          infoEl.className =
+            "disease-info" + (isHealthy ? " healthy-info" : "");
+          infoEl.innerHTML = `
+      <div class="info-row"><span class="info-label">${labels.symptom}:</span><span class="info-text">${langInfo.symptom}</span></div>
+      <div class="info-row"><span class="info-label">${labels.tip}:</span><span class="info-text">${langInfo.tip}</span></div>
+    `;
+        } else {
+          infoEl.innerHTML = "";
+        }
 
         probList.innerHTML = "";
         const sorted = Object.entries(data.all_probabilities).sort(
